@@ -101,8 +101,6 @@ def fetch_logs(filter_type="All"):
     return logs
 
 
-
-
 # Show Login Screen
 def show_login_screen():
     for widget in root.winfo_children():
@@ -139,7 +137,7 @@ def show_logs_screen():
     global datetime_label
     datetime_label = ctk.CTkLabel(root, text="", font=("Arial", 14))
     datetime_label.place(x=320, y=10)
-    
+    update_datetime()
 
     title_label = ctk.CTkLabel(root, text="Admin Logs", font=("Arial", 20))
     title_label.pack(pady=(40, 10))
@@ -170,8 +168,7 @@ def show_logs_screen():
         else:
             ctk.CTkLabel(failed_frame, text=log_entry).pack(anchor="w", padx=10, pady=2)
 
-    clear_logs_button = ctk.CTkButton(root, text="Clear Logs", fg_color="red", command=clear_logs)
-    clear_logs_button.pack(pady=10)
+
 # Show PIN Screen
 def show_pin_screen():
     for widget in root.winfo_children():
