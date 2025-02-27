@@ -29,18 +29,19 @@ def init_db():
     conn.close()
 
 # Function to add an admin (Run once to set up the admin)
-def add_admin(username, password):
+def add_admin(username, password, pin):
     conn = sqlite3.connect("smart_lock.db")
     cursor = conn.cursor()
 
     try:
-        cursor.execute("INSERT INTO admin (username, password) VALUES (?, ?)", (username, password))
+        cursor.execute("INSERT INTO admin (username, password, pin) VALUES (?, ?, ?)", (username, password, pin))
         conn.commit()
         print("Admin account created successfully.")
     except sqlite3.IntegrityError:
         print("Error: Admin username already exists.")
 
     conn.close()
+
 
 # Function to log admin login
 def log_admin_login(admin_id):

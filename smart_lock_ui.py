@@ -85,6 +85,10 @@ def show_login_screen():
     status_label = ctk.CTkLabel(root, text="")
     status_label.pack(pady=5)
 
+    # PIN Unlock Button
+    pin_unlock_button = ctk.CTkButton(root, text="Enter PIN to Unlock", command=show_pin_screen)
+    pin_unlock_button.pack(pady=10)
+
 # Virtual Keyboard
 def show_keyboard(entry_widget):
     keyboard = ctk.CTkToplevel(root)
@@ -119,6 +123,49 @@ def show_keyboard(entry_widget):
 
     close_btn = ctk.CTkButton(keyboard, text="Close", width=60, height=30, command=keyboard.destroy)
     close_btn.grid(row=row + 1, column=3, columnspan=3, padx=2, pady=2)
+
+# PIN Unlock UI
+def show_pin_screen():
+    for widget in root.winfo_children():
+        widget.destroy()
+
+    title_label = ctk.CTkLabel(root, text="Enter PIN to Unlock", font=("Arial", 20))
+    title_label.pack(pady=10)
+
+    global pin_entry, pin_result_label
+    pin_entry = ctk.CTkEntry(root, show="*")
+    pin_entry.pack(pady=5)
+
+    unlock_button = ctk.CTkButton(root, text="Unlock Door", command=unlock_with_pin)
+    unlock_button.pack(pady=10)
+
+    pin_result_label = ctk.CTkLabel(root, text="")
+    pin_result_label.pack(pady=5)
+
+    back_button = ctk.CTkButton(root, text="Back to Login", command=show_login_screen)
+    back_button.pack(pady=10)
+
+# PIN Authentication sd
+def unlock_with_pin():
+    try:
+        pin = int(pin_entry.get())  # Convert input to integer
+    except ValueError:
+        pin_result_label.configure(text="Invalid PIN format!", text_color="red")
+        return
+
+    conn = sqlite3.connect("smart_lock.db")
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT username FROM admin WHERE pin = ?", ((int.pin),))
+    admin = cursor.fetchone()
+
+    if admin:
+        pin_result_label.configure(text=f"Door Unlocked! Welcome {admin[0]}", text_color="green")
+    else:
+        pin_result_label.configure(text="Invalid PIN!", text_color="red")
+
+    conn.close()
+
 
 # Initialize Main Window
 root = ctk.CTk()
