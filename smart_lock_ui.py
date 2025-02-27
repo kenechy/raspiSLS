@@ -1,4 +1,5 @@
 import sqlite3
+import pytz
 import customtkinter as ctk
 from datetime import datetime, timedelta
 
@@ -29,6 +30,12 @@ def create_tables():
     conn.close()
 
 create_tables()
+
+def update_datetime():
+    ph_time = datetime.now(pytz.timezone("Asia/Manila"))  # Get PH time
+    time_str = ph_time.strftime("%I:%M:%S %p")  # Convert to AM/PM format
+    time_label.configure(text=time_str)
+    root.after(1000, update_datetime)
 
 # Log Admin Login Attempt
 def log_attempt(status, input_type):
@@ -108,7 +115,13 @@ def show_login_screen():
     for widget in root.winfo_children():
         widget.destroy()
 
-    global username_entry, password_entry, status_label
+    global username_entry, password_entry, status_label, time_label
+
+    # Time Label (Upper Right Corner)
+    time_label = ctk.CTkLabel(root, text="", font=("Arial", 14))
+    time_label.place(x=360, y=10)  # Adjusted for upper-right positioning
+
+    update_datetime()  # Start updating time
 
     title_label = ctk.CTkLabel(root, text="Admin Login", font=("Arial", 20))
     title_label.pack(pady=10)
@@ -128,18 +141,23 @@ def show_login_screen():
     pin_unlock_button = ctk.CTkButton(root, text="Enter PIN to Unlock", command=show_pin_screen)
     pin_unlock_button.pack(pady=10)
 
-# Show Logs Screen
+
 # Show Logs Screen (Now Scrollable)
 def show_logs_screen():
     for widget in root.winfo_children():
         widget.destroy()
 
-    # ✅ Back Button (Now in Upper-Left Corner)
+    global time_label
+    time_label = ctk.CTkLabel(root, text="", font=("Arial", 14))
+    time_label.place(x=360, y=10)
+
+    update_datetime()
+
     back_button = ctk.CTkButton(root, text="⬅ Back", command=show_login_screen)
-    back_button.place(x=10, y=10)  # Positioned at the top-left corner
+    back_button.place(x=10, y=10)
 
     title_label = ctk.CTkLabel(root, text="Admin Logs", font=("Arial", 20))
-    title_label.pack(pady=(40, 10))  # Adjusted padding to prevent overlap
+    title_label.pack(pady=(40, 10))
 
     filter_var = ctk.StringVar(value="All")
     filter_options = ctk.CTkOptionMenu(root, variable=filter_var, values=["All", "Today", "Past Week"], command=lambda _: show_logs_screen())
@@ -147,7 +165,6 @@ def show_logs_screen():
 
     logs = fetch_logs(filter_var.get())
 
-    # ✅ Scrollable Frame for Logs
     scrollable_frame = ctk.CTkScrollableFrame(root, width=450, height=200)
     scrollable_frame.pack(padx=10, pady=5, fill="both", expand=True)
 
@@ -162,17 +179,26 @@ def show_logs_screen():
 
     for log in logs:
         timestamp, status, input_type = log
-        log_entry = f"{timestamp} - {input_type}"
+
+        # ✅ Convert timestamps to 12-hour format with AM/PM
+        formatted_time = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").strftime("%I:%M:%S %p")
+
+        log_entry = f"{formatted_time} - {input_type}"
         if status == "Success":
             ctk.CTkLabel(success_frame, text=log_entry).pack(anchor="w", padx=10, pady=2)
         else:
             ctk.CTkLabel(failed_frame, text=log_entry).pack(anchor="w", padx=10, pady=2)
-
   
 # Show PIN Screen
 def show_pin_screen():
     for widget in root.winfo_children():
         widget.destroy()
+
+    global time_label
+    time_label = ctk.CTkLabel(root, text="", font=("Arial", 14))
+    time_label.place(x=360, y=10)
+
+    update_datetime()
 
     title_label = ctk.CTkLabel(root, text="Enter PIN to Unlock", font=("Arial", 20))
     title_label.pack(pady=10)
