@@ -79,32 +79,29 @@ def authenticate_pin(pin):
 
 # Fetch Logs
 def fetch_logs(filter_type="All"):
+    """Fetch logs from database in descending order (newest first)."""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    query = "SELECT timestamp, status, input_type FROM admin_logs"
+    base_query = "SELECT timestamp, status, input_type FROM admin_logs"
+    order_by = " ORDER BY timestamp DESC"
     params = ()
 
     if filter_type == "Today":
-        query += " WHERE timestamp >= ?"
+        base_query += " WHERE timestamp >= ?"
         params = (datetime.now().strftime("%Y-%m-%d 00:00:00"),)
     elif filter_type == "Past Week":
-        query += " WHERE timestamp >= ?"
+        base_query += " WHERE timestamp >= ?"
         params = ((datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d 00:00:00"),)
 
-    cursor.execute(query, params)
+    full_query = base_query + order_by
+    cursor.execute(full_query, params)
     logs = cursor.fetchall()
     conn.close()
     return logs
 
-# Clear Logs
-def clear_logs():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM admin_logs")
-    conn.commit()
-    conn.close()
-    show_logs_screen()
+
+
 
 # Show Login Screen
 def show_login_screen():
@@ -131,18 +128,21 @@ def show_login_screen():
     pin_unlock_button = ctk.CTkButton(root, text="Enter PIN to Unlock", command=show_pin_screen)
     pin_unlock_button.pack(pady=10)
 
-# Show Logs Screen
-# Show Logs Screen (Now Scrollable)
+
 def show_logs_screen():
     for widget in root.winfo_children():
         widget.destroy()
 
-    # ✅ Back Button (Now in Upper-Left Corner)
-    back_button = ctk.CTkButton(root, text="⬅ Back", command=show_login_screen)
-    back_button.place(x=10, y=10)  # Positioned at the top-left corner
+    back_button = ctk.CTkButton(root, text="⬅", width=40, height=30, font=("Arial", 14), command=show_login_screen)
+    back_button.place(x=10, y=10)
+
+    global datetime_label
+    datetime_label = ctk.CTkLabel(root, text="", font=("Arial", 14))
+    datetime_label.place(x=320, y=10)
+    
 
     title_label = ctk.CTkLabel(root, text="Admin Logs", font=("Arial", 20))
-    title_label.pack(pady=(40, 10))  # Adjusted padding to prevent overlap
+    title_label.pack(pady=(40, 10))
 
     filter_var = ctk.StringVar(value="All")
     filter_options = ctk.CTkOptionMenu(root, variable=filter_var, values=["All", "Today", "Past Week"], command=lambda _: show_logs_screen())
@@ -150,7 +150,6 @@ def show_logs_screen():
 
     logs = fetch_logs(filter_var.get())
 
-    # ✅ Scrollable Frame for Logs
     scrollable_frame = ctk.CTkScrollableFrame(root, width=450, height=200)
     scrollable_frame.pack(padx=10, pady=5, fill="both", expand=True)
 
@@ -171,7 +170,8 @@ def show_logs_screen():
         else:
             ctk.CTkLabel(failed_frame, text=log_entry).pack(anchor="w", padx=10, pady=2)
 
-  
+    clear_logs_button = ctk.CTkButton(root, text="Clear Logs", fg_color="red", command=clear_logs)
+    clear_logs_button.pack(pady=10)
 # Show PIN Screen
 def show_pin_screen():
     for widget in root.winfo_children():
