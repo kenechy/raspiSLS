@@ -156,7 +156,7 @@ def unlock_with_pin():
     conn = sqlite3.connect("smart_lock.db")
     cursor = conn.cursor()
 
-    cursor.execute("SELECT username FROM admin WHERE pin = ?", ((int.pin),))
+    cursor.execute("SELECT username FROM admin WHERE pin = ?", (pin,))  # Corrected tuple format
     admin = cursor.fetchone()
 
     if admin:
@@ -165,6 +165,7 @@ def unlock_with_pin():
         pin_result_label.configure(text="Invalid PIN!", text_color="red")
 
     conn.close()
+
 
 
 # Initialize Main Window
