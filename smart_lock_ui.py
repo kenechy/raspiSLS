@@ -96,6 +96,8 @@ def fetch_logs(filter_type="All"):
         query += " WHERE timestamp >= ?"
         params = ((datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d 00:00:00"),)
 
+    query += " ORDER BY timestamp DESC"  # ✅ Ensure newest logs appear first
+
     cursor.execute(query, params)
     logs = cursor.fetchall()
     conn.close()
@@ -147,43 +149,40 @@ def show_logs_screen():
     for widget in root.winfo_children():
         widget.destroy()
 
-    global time_label
-    time_label = ctk.CTkLabel(root, text="", font=("Arial", 14))
-    time_label.place(x=360, y=10)
-
-    update_datetime()
-
+    # Back Button (Upper-Left Corner)
     back_button = ctk.CTkButton(root, text="⬅ Back", command=show_login_screen)
-    back_button.place(x=10, y=10)
+    back_button.place(x=10, y=10)  
 
     title_label = ctk.CTkLabel(root, text="Admin Logs", font=("Arial", 20))
-    title_label.pack(pady=(40, 10))
+    title_label.pack(pady=(40, 10))  
 
     filter_var = ctk.StringVar(value="All")
     filter_options = ctk.CTkOptionMenu(root, variable=filter_var, values=["All", "Today", "Past Week"], command=lambda _: show_logs_screen())
     filter_options.pack(pady=5)
 
-    logs = fetch_logs(filter_var.get())
+    logs = fetch_logs(filter_var.get())  # Fetch logs in descending order
 
-    scrollable_frame = ctk.CTkScrollableFrame(root, width=450, height=200)
-    scrollable_frame.pack(padx=10, pady=5, fill="both", expand=True)
+    # Frame to hold success & failed logs side by side
+    logs_container = ctk.CTkFrame(root)
+    logs_container.pack(fill="both", expand=True, padx=10, pady=5)
 
-    success_frame = ctk.CTkFrame(scrollable_frame)
-    success_frame.pack(fill="both", expand=True, padx=10, pady=5)
+    # ✅ Scrollable Frame for Successful Attempts (LEFT)
+    success_frame = ctk.CTkScrollableFrame(logs_container, width=220, height=200)
+    success_frame.pack(side="left", fill="both", expand=True, padx=5)
 
-    failed_frame = ctk.CTkFrame(scrollable_frame)
-    failed_frame.pack(fill="both", expand=True, padx=10, pady=5)
+    # ✅ Scrollable Frame for Failed Attempts (RIGHT)
+    failed_frame = ctk.CTkScrollableFrame(logs_container, width=220, height=200)
+    failed_frame.pack(side="right", fill="both", expand=True, padx=5)
 
-    ctk.CTkLabel(success_frame, text="✅ Successful Attempts").pack()
-    ctk.CTkLabel(failed_frame, text="❌ Failed Attempts").pack()
+    ctk.CTkLabel(success_frame, text="✅ Successful Attempts").pack(pady=5)
+    ctk.CTkLabel(failed_frame, text="❌ Failed Attempts").pack(pady=5)
 
     for log in logs:
         timestamp, status, input_type = log
-
-        # ✅ Convert timestamps to 12-hour format with AM/PM
-        formatted_time = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").strftime("%I:%M:%S %p")
+        formatted_time = datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S").strftime("%b %d, %Y %I:%M %p")  # Convert to readable format
 
         log_entry = f"{formatted_time} - {input_type}"
+
         if status == "Success":
             ctk.CTkLabel(success_frame, text=log_entry).pack(anchor="w", padx=10, pady=2)
         else:
