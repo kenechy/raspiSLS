@@ -31,78 +31,7 @@ def create_tables():
 
 create_tables()
 
-def update_datetime():
-    """Update the time and date label every second."""
-    current_time = time.strftime("%Y-%m-%d %H:%M:%S")  # Format: YYYY-MM-DD HH:MM:SS
-    datetime_label.configure(text=current_time)
-    root.after(1000, update_datetime)  # Refresh every second
 
-def fetch_logs(filter_type="All"):
-    """Fetch logs from database and return them in descending order (newest first)."""
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    query = "SELECT timestamp, status, input_type FROM admin_logs ORDER BY timestamp DESC"
-    params = ()
-
-    if filter_type == "Today":
-        query = "SELECT timestamp, status, input_type FROM admin_logs WHERE timestamp >= ? ORDER BY timestamp DESC"
-        params = (datetime.now().strftime("%Y-%m-%d 00:00:00"),)
-    elif filter_type == "Past Week":
-        query = "SELECT timestamp, status, input_type FROM admin_logs WHERE timestamp >= ? ORDER BY timestamp DESC"
-        params = ((datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d 00:00:00"),)
-
-    cursor.execute(query, params)
-    logs = cursor.fetchall()
-    conn.close()
-    return logs
-
-def show_logs_screen():
-    for widget in root.winfo_children():
-        widget.destroy()
-
-    # ✅ Small Back Button in Upper-Left Corner
-    back_button = ctk.CTkButton(root, text="⬅", width=40, height=30, font=("Arial", 14), command=show_login_screen)
-    back_button.place(x=10, y=10)
-
-    # ✅ Real-Time Date & Time in Upper-Right Corner
-    global datetime_label
-    datetime_label = ctk.CTkLabel(root, text="", font=("Arial", 14))
-    datetime_label.place(x=320, y=10)  # Positioned in the upper-right
-    update_datetime()  # Start updating the time
-
-    title_label = ctk.CTkLabel(root, text="Admin Logs", font=("Arial", 20))
-    title_label.pack(pady=(40, 10))  # Adjusted to avoid overlapping
-
-    filter_var = ctk.StringVar(value="All")
-    filter_options = ctk.CTkOptionMenu(root, variable=filter_var, values=["All", "Today", "Past Week"], command=lambda _: show_logs_screen())
-    filter_options.pack(pady=5)
-
-    logs = fetch_logs(filter_var.get())
-
-    # ✅ Scrollable Frame for Logs
-    scrollable_frame = ctk.CTkScrollableFrame(root, width=450, height=200)
-    scrollable_frame.pack(padx=10, pady=5, fill="both", expand=True)
-
-    success_frame = ctk.CTkFrame(scrollable_frame)
-    success_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-    failed_frame = ctk.CTkFrame(scrollable_frame)
-    failed_frame.pack(fill="both", expand=True, padx=10, pady=5)
-
-    ctk.CTkLabel(success_frame, text="✅ Successful Attempts").pack()
-    ctk.CTkLabel(failed_frame, text="❌ Failed Attempts").pack()
-
-    for log in logs:
-        timestamp, status, input_type = log
-        log_entry = f"{timestamp} - {input_type}"
-        if status == "Success":
-            ctk.CTkLabel(success_frame, text=log_entry).pack(anchor="w", padx=10, pady=2)
-        else:
-            ctk.CTkLabel(failed_frame, text=log_entry).pack(anchor="w", padx=10, pady=2)
-
-    clear_logs_button = ctk.CTkButton(root, text="Clear Logs", fg_color="red", command=clear_logs)
-    clear_logs_button.pack(pady=10)
 
 # Log Admin Login Attempt
 def log_attempt(status, input_type):
