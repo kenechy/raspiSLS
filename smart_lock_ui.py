@@ -1,180 +1,150 @@
 import sqlite3
 import customtkinter as ctk
-from datetime import datetime
+from datetime import datetime, timedelta
 
-# Initialize CustomTkinter
-ctk.set_appearance_mode("dark")  
-ctk.set_default_color_theme("blue")
+# Database setup
+DB_PATH = "smart_lock.db"
 
-# Database Functions
-def authenticate_admin(username, password):
-    conn = sqlite3.connect("smart_lock.db")
+def create_tables():
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # Admin table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS admin (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        username TEXT NOT NULL,
+                        password TEXT NOT NULL,
+                        pin TEXT)''')
 
-    cursor.execute("SELECT id FROM admin WHERE username = ? AND password = ?", (username, password))
-    admin = cursor.fetchone()
+    # Logs table
+    cursor.execute('''CREATE TABLE IF NOT EXISTS admin_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        timestamp TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        input_type TEXT NOT NULL)''')
 
-    if admin:
-        log_admin_login(admin[0])
-        show_logs_screen()  # Switch to logs screen
-    else:
-        status_label.configure(text="Invalid credentials", text_color="red")
-
-    conn.close()
-
-def log_admin_login(admin_id):
-    conn = sqlite3.connect("smart_lock.db")
-    cursor = conn.cursor()
-    cursor.execute("INSERT INTO login_logs (admin_id) VALUES (?)", (admin_id,))
     conn.commit()
     conn.close()
 
-def fetch_logs():
-    conn = sqlite3.connect("smart_lock.db")
+create_tables()  # Ensure tables exist
+
+# Function to log attempts
+def log_attempt(status, input_type):
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT timestamp FROM login_logs ORDER BY id DESC")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    cursor.execute("INSERT INTO admin_logs (timestamp, status, input_type) VALUES (?, ?, ?)", 
+                   (timestamp, status, input_type))
+    conn.commit()
+    conn.close()
+    refresh_logs()  # Update the UI after logging
+
+# Function to fetch logs based on filters
+def get_logs(filter_type="All"):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    query = "SELECT timestamp, status, input_type FROM admin_logs"
+    params = ()
+
+    if filter_type == "Today":
+        query += " WHERE timestamp >= ?"
+        params = (datetime.now().strftime("%Y-%m-%d 00:00:00"),)
+    elif filter_type == "Past Week":
+        query += " WHERE timestamp >= ?"
+        params = ((datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d 00:00:00"),)
+
+    cursor.execute(query, params)
     logs = cursor.fetchall()
     conn.close()
     return logs
 
-# UI Functions
-def login():
-    username = username_entry.get()
-    password = password_entry.get()
-    authenticate_admin(username, password)
-
-def show_logs_screen():
-    for widget in root.winfo_children():
+# Function to refresh logs in UI
+def refresh_logs():
+    for widget in success_frame.winfo_children():
         widget.destroy()
-
-    title_label = ctk.CTkLabel(root, text="Login Logs", font=("Arial", 20))
-    title_label.pack(pady=10)
-
-    logs = fetch_logs()
+    for widget in failed_frame.winfo_children():
+        widget.destroy()
     
-    log_textbox = ctk.CTkTextbox(root, width=300, height=200)
-    log_textbox.pack(pady=10)
+    logs = get_logs(filter_var.get())
     
     for log in logs:
-        log_textbox.insert("end", f"{log[0]}\n")
-    
-    back_button = ctk.CTkButton(root, text="Back to Login", command=show_login_screen)
-    back_button.pack(pady=10)
+        timestamp, status, input_type = log
+        if status == "Success":
+            ctk.CTkLabel(success_frame, text=f"{timestamp} - {input_type}").pack(anchor="w", padx=10, pady=2)
+        else:
+            ctk.CTkLabel(failed_frame, text=f"{timestamp} - {input_type}").pack(anchor="w", padx=10, pady=2)
 
-def show_login_screen():
-    for widget in root.winfo_children():
-        widget.destroy()
-
-    global username_entry, password_entry, status_label
-
-    title_label = ctk.CTkLabel(root, text="Admin Login", font=("Arial", 20))
-    title_label.pack(pady=10)
-
-    username_entry = ctk.CTkEntry(root, placeholder_text="Username")
-    username_entry.pack(pady=5)
-
-    password_entry = ctk.CTkEntry(root, placeholder_text="Password", show="*")
-    password_entry.pack(pady=5)
-
-    keyboard_button = ctk.CTkButton(root, text="Open Keyboard", command=lambda: show_keyboard(username_entry))
-    keyboard_button.pack(pady=5)
-
-    login_button = ctk.CTkButton(root, text="Login", command=login)
-    login_button.pack(pady=10)
-
-    status_label = ctk.CTkLabel(root, text="")
-    status_label.pack(pady=5)
-
-    # PIN Unlock Button
-    pin_unlock_button = ctk.CTkButton(root, text="Enter PIN to Unlock", command=show_pin_screen)
-    pin_unlock_button.pack(pady=10)
-
-# Virtual Keyboard
-def show_keyboard(entry_widget):
-    keyboard = ctk.CTkToplevel(root)
-    keyboard.geometry("400x250")
-    keyboard.title("Virtual Keyboard")
-
-    keys = [
-        "1", "2", "3", "4", "5", "6", "7", "8", "9", "0",
-        "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P",
-        "A", "S", "D", "F", "G", "H", "J", "K", "L",
-        "Z", "X", "C", "V", "B", "N", "M"
-    ]
-
-    def insert_key(key):
-        entry_widget.insert("end", key)
-
-    def backspace():
-        entry_widget.delete(len(entry_widget.get()) - 1)
-
-    row = 0
-    col = 0
-    for key in keys:
-        btn = ctk.CTkButton(keyboard, text=key, width=35, height=30, command=lambda k=key: insert_key(k))
-        btn.grid(row=row, column=col, padx=2, pady=2)
-        col += 1
-        if col > 9:
-            col = 0
-            row += 1
-
-    backspace_btn = ctk.CTkButton(keyboard, text="⌫", width=60, height=30, command=backspace)
-    backspace_btn.grid(row=row + 1, column=0, columnspan=3, padx=2, pady=2)
-
-    close_btn = ctk.CTkButton(keyboard, text="Close", width=60, height=30, command=keyboard.destroy)
-    close_btn.grid(row=row + 1, column=3, columnspan=3, padx=2, pady=2)
-
-# PIN Unlock UI
-def show_pin_screen():
-    for widget in root.winfo_children():
-        widget.destroy()
-
-    title_label = ctk.CTkLabel(root, text="Enter PIN to Unlock", font=("Arial", 20))
-    title_label.pack(pady=10)
-
-    global pin_entry, pin_result_label
-    pin_entry = ctk.CTkEntry(root, show="*")
-    pin_entry.pack(pady=5)
-
-    unlock_button = ctk.CTkButton(root, text="Unlock Door", command=unlock_with_pin)
-    unlock_button.pack(pady=10)
-
-    pin_result_label = ctk.CTkLabel(root, text="")
-    pin_result_label.pack(pady=5)
-
-    back_button = ctk.CTkButton(root, text="Back to Login", command=show_login_screen)
-    back_button.pack(pady=10)
-
-# PIN Authentication sd
-def unlock_with_pin():
-    try:
-        pin = int(pin_entry.get())  # Convert input to integer
-    except ValueError:
-        pin_result_label.configure(text="Invalid PIN format!", text_color="red")
-        return
-
-    conn = sqlite3.connect("smart_lock.db")
+# Function to clear logs
+def clear_logs():
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-
-    cursor.execute("SELECT username FROM admin WHERE pin = ?", (pin,))  # Corrected tuple format
-    admin = cursor.fetchone()
-
-    if admin:
-        pin_result_label.configure(text=f"Door Unlocked! Welcome {admin[0]}", text_color="green")
-    else:
-        pin_result_label.configure(text="Invalid PIN!", text_color="red")
-
+    cursor.execute("DELETE FROM admin_logs")
+    conn.commit()
     conn.close()
+    refresh_logs()
 
+# Function to handle password authentication
+def authenticate_password(input_password):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM admin WHERE password = ?", (input_password,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result:
+        log_attempt("Success", "Password")
+    else:
+        log_attempt("Failed", "Password")
 
+# Function to handle PIN authentication
+def authenticate_pin(input_pin):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT username FROM admin WHERE pin = ?", (input_pin,))
+    result = cursor.fetchone()
+    conn.close()
+    
+    if result:
+        log_attempt("Success", "PIN")
+    else:
+        log_attempt("Failed", "PIN")
 
-# Initialize Main Window
+# GUI Setup
 root = ctk.CTk()
-root.geometry("480x320")  # Adjusted for 3.5-inch LCD screen
 root.title("Smart Lock System")
+root.geometry("600x500")
 
-# Show Login Screen First
-show_login_screen()
+# Login Section
+ctk.CTkLabel(root, text="Enter Password:").pack()
+password_entry = ctk.CTkEntry(root, show="*")
+password_entry.pack()
+ctk.CTkButton(root, text="Login", command=lambda: authenticate_password(password_entry.get())).pack(pady=5)
 
-# Run App
+ctk.CTkLabel(root, text="Enter PIN:").pack()
+pin_entry = ctk.CTkEntry(root)
+pin_entry.pack()
+ctk.CTkButton(root, text="Unlock with PIN", command=lambda: authenticate_pin(pin_entry.get())).pack(pady=5)
+
+# Filter Logs
+filter_var = ctk.StringVar(value="All")
+filter_options = ctk.CTkOptionMenu(root, variable=filter_var, values=["All", "Today", "Past Week"], command=lambda _: refresh_logs())
+filter_options.pack(pady=5)
+
+# Success Logs Section
+ctk.CTkLabel(root, text="✅ Successful Attempts").pack()
+success_frame = ctk.CTkFrame(root)
+success_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+# Failed Logs Section
+ctk.CTkLabel(root, text="❌ Failed Attempts").pack()
+failed_frame = ctk.CTkFrame(root)
+failed_frame.pack(fill="both", expand=True, padx=10, pady=5)
+
+# Clear Logs Button
+ctk.CTkButton(root, text="Clear Logs", fg_color="red", command=clear_logs).pack(pady=10)
+
+# Initial log load
+refresh_logs()
+
 root.mainloop()
