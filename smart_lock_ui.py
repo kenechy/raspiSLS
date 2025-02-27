@@ -129,6 +129,7 @@ def show_login_screen():
     pin_unlock_button.pack(pady=10)
 
 # Show Logs Screen
+# Show Logs Screen (Now Scrollable)
 def show_logs_screen():
     for widget in root.winfo_children():
         widget.destroy()
@@ -142,10 +143,14 @@ def show_logs_screen():
 
     logs = fetch_logs(filter_var.get())
 
-    success_frame = ctk.CTkFrame(root)
+    # ✅ Scrollable Frame for Logs
+    scrollable_frame = ctk.CTkScrollableFrame(root, width=450, height=200)
+    scrollable_frame.pack(padx=10, pady=5, fill="both", expand=True)
+
+    success_frame = ctk.CTkFrame(scrollable_frame)
     success_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-    failed_frame = ctk.CTkFrame(root)
+    failed_frame = ctk.CTkFrame(scrollable_frame)
     failed_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
     ctk.CTkLabel(success_frame, text="✅ Successful Attempts").pack()
@@ -162,8 +167,11 @@ def show_logs_screen():
     clear_logs_button = ctk.CTkButton(root, text="Clear Logs", fg_color="red", command=clear_logs)
     clear_logs_button.pack(pady=10)
 
+    # ✅ Back to Login Button (Visible Now)
     back_button = ctk.CTkButton(root, text="Back to Login", command=show_login_screen)
     back_button.pack(pady=10)
+
+
 
 # Show PIN Screen
 def show_pin_screen():
