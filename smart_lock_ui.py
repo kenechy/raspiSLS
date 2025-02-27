@@ -1,3 +1,4 @@
+Almost out of storage … If you run out, you can't create, edit, and upload files.
 import sqlite3
 import customtkinter as ctk
 from datetime import datetime, timedelta
