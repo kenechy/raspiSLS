@@ -134,8 +134,12 @@ def show_logs_screen():
     for widget in root.winfo_children():
         widget.destroy()
 
+    # ✅ Back Button (Now in Upper-Left Corner)
+    back_button = ctk.CTkButton(root, text="⬅ Back", command=show_login_screen)
+    back_button.place(x=10, y=10)  # Positioned at the top-left corner
+
     title_label = ctk.CTkLabel(root, text="Admin Logs", font=("Arial", 20))
-    title_label.pack(pady=10)
+    title_label.pack(pady=(40, 10))  # Adjusted padding to prevent overlap
 
     filter_var = ctk.StringVar(value="All")
     filter_options = ctk.CTkOptionMenu(root, variable=filter_var, values=["All", "Today", "Past Week"], command=lambda _: show_logs_screen())
@@ -164,15 +168,7 @@ def show_logs_screen():
         else:
             ctk.CTkLabel(failed_frame, text=log_entry).pack(anchor="w", padx=10, pady=2)
 
-    clear_logs_button = ctk.CTkButton(root, text="Clear Logs", fg_color="red", command=clear_logs)
-    clear_logs_button.pack(pady=10)
-
-    # ✅ Back to Login Button (Visible Now)
-    back_button = ctk.CTkButton(root, text="Back to Login", command=show_login_screen)
-    back_button.pack(pady=10)
-
-
-
+  
 # Show PIN Screen
 def show_pin_screen():
     for widget in root.winfo_children():
